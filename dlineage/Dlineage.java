@@ -88,52 +88,6 @@ public class Dlineage
 				strict,
 				database ).getDatabase( );
 	}
-	
-	public Dlineage( String[] sqlContents, EDbVendor vendor, boolean strict,
-			boolean showUIInfo )
-	{
-		this.strict = strict;
-		this.showUIInfo = showUIInfo;
-		this.vendor = vendor;
-		this.sqlFiles = null;
-		tableColumns.clear( );
-		procedures = new Pair<procedureImpactResult, List<ProcedureMetaData>>( new procedureImpactResult( ),
-				new ArrayList<ProcedureMetaData>( ) );
-
-		for ( int i = 0; i < sqlContents.length; i++ )
-		{
-			String content = sqlContents[i];
-			String database = null;
-			database = new DDLParser( tableColumns,
-					procedures,
-					vendor,
-					content.toUpperCase( ),
-					strict,
-					database ).getDatabase( );
-		}
-
-		String database = null;
-		for ( int i = 0; i < sqlContents.length; i++ )
-		{
-			String content = sqlContents[i];
-			database = new ViewParser( tableColumns,
-					vendor,
-					content.toUpperCase( ),
-					strict,
-					database ).getDatabase( );
-		}
-		
-		database = null;
-		for ( int i = 0; i < sqlContents.length; i++ )
-		{
-			String content = sqlContents[i];
-			database = new ProcedureRelationScanner( procedures,
-					vendor,
-					content.toUpperCase( ),
-					strict,
-					database ).getDatabase( );
-		}
-	}
 
 	public Dlineage( File[] sqlFiles, EDbVendor vendor, boolean strict,
 			boolean showUIInfo )

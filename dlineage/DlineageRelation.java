@@ -6,10 +6,11 @@ import gudusoft.gsqlparser.EDbVendor;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+
 
 import demos.dlineage.model.ddl.schema.column;
 import demos.dlineage.model.ddl.schema.database;
@@ -90,104 +92,99 @@ public class DlineageRelation
 				if ( target.getLinkTable( ) != null
 						&& target.getColumns( ) != null )
 				{
-					List<linkTable> links = target.getLinkTable( );
-					for ( int i = 0; i < links.size( ); i++ )
+					linkTable link = target.getLinkTable( );
+					for ( int j = 0; j < target.getColumns( ).size( ); j++ )
 					{
-						linkTable link = links.get( i );
+						sourceColumn source = target.getColumns( ).get( j );
 
-						for ( int j = 0; j < target.getColumns( ).size( ); j++ )
+						if ( "true".equals( source.getOrphan( ) ) )
+							continue;
+
+						if ( source.getClause( ) != null )
 						{
-							sourceColumn source = target.getColumns( ).get( j );
-
-							if ( "true".equals( source.getOrphan( ) ) )
-								continue;
-
-							if ( source.getClause( ) != null )
+							if ( "select".equalsIgnoreCase( link.getType( ) ) )
 							{
-								if ( "select".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
-								if ( "view".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
-								if ( "insert".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
-								if ( "update".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"assign".equalsIgnoreCase( source.getClause( ) )
-											&& !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
-								if ( "merge".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"assign".equalsIgnoreCase( source.getClause( ) )
-											&& !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
+								if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
 							}
-
-							String sourceTableName = null;
-							if ( source.getTableOwner( ) != null
-									&& !"unknown".equalsIgnoreCase( source.getTableOwner( ) ) )
+							if ( "view".equalsIgnoreCase( link.getType( ) ) )
 							{
-								sourceTableName = source.getTableOwner( )
-										+ "."
-										+ source.getTableName( );
+								if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
 							}
-							else
+							if ( "insert".equalsIgnoreCase( link.getType( ) ) )
 							{
-								sourceTableName = source.getTableName( );
+								if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
 							}
+							if ( "update".equalsIgnoreCase( link.getType( ) ) )
+							{
+								if ( !"assign".equalsIgnoreCase( source.getClause( ) )
+										&& !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
+							}
+							if ( "merge".equalsIgnoreCase( link.getType( ) ) )
+							{
+								if ( !"assign".equalsIgnoreCase( source.getClause( ) )
+										&& !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
+							}
+						}
 
-							ColumnMetaData sourceColumn = scanner.getColumnMetaData( sourceTableName
+						String sourceTableName = null;
+						if ( source.getTableOwner( ) != null
+								&& !"unknown".equalsIgnoreCase( source.getTableOwner( ) ) )
+						{
+							sourceTableName = source.getTableOwner( )
 									+ "."
-									+ source.getName( ) );
+									+ source.getTableName( );
+						}
+						else
+						{
+							sourceTableName = source.getTableName( );
+						}
 
-							String targetTableName = null;
-							if ( link.getTableOwner( ) != null
-									&& !"unknown".equalsIgnoreCase( link.getTableOwner( ) ) )
+						ColumnMetaData sourceColumn = scanner.getColumnMetaData( sourceTableName
+								+ "."
+								+ source.getName( ) );
+
+						String targetTableName = null;
+						if ( link.getTableOwner( ) != null
+								&& !"unknown".equalsIgnoreCase( link.getTableOwner( ) ) )
+						{
+							targetTableName = link.getTableOwner( )
+									+ "."
+									+ link.getTableName( );
+						}
+						else
+						{
+							targetTableName = link.getTableName( );
+						}
+
+						ColumnMetaData targetColumn = scanner.getColumnMetaData( targetTableName,
+								link.getName( ) );
+
+						if ( sourceColumn != null && targetColumn != null )
+						{
+							relations.add( new ColumnMetaData[]{
+									targetColumn, sourceColumn
+							} );
+						}
+						else
+						{
+							if ( sourceColumn == null )
 							{
-								targetTableName = link.getTableOwner( )
+								System.err.println( sourceTableName
+										+ source.getName( )
+										+ " should not be null." );
+							}
+
+							if ( targetColumn == null )
+							{
+								System.err.println( targetTableName
 										+ "."
-										+ link.getTableName( );
-							}
-							else
-							{
-								targetTableName = link.getTableName( );
-							}
-
-							ColumnMetaData targetColumn = scanner.getColumnMetaData( targetTableName,
-									link.getName( ) );
-
-							if ( sourceColumn != null && targetColumn != null )
-							{
-								relations.add( new ColumnMetaData[]{
-										targetColumn, sourceColumn
-								} );
-							}
-							else
-							{
-								if ( sourceColumn == null )
-								{
-									System.err.println( sourceTableName
-											+ source.getName( )
-											+ " should not be null." );
-								}
-
-								if ( targetColumn == null )
-								{
-									System.err.println( targetTableName
-											+ "."
-											+ link.getName( )
-											+ " should not be null." );
-								}
+										+ link.getName( )
+										+ " should not be null." );
 							}
 						}
 					}
@@ -331,117 +328,113 @@ public class DlineageRelation
 				if ( target.getLinkTable( ) != null
 						&& target.getColumns( ) != null )
 				{
-					List<linkTable> links = target.getLinkTable( );
-					for ( int i = 0; i < links.size( ); i++ )
+					linkTable link = target.getLinkTable( );
+					for ( int j = 0; j < target.getColumns( ).size( ); j++ )
 					{
-						linkTable link = links.get( i );
-						for ( int j = 0; j < target.getColumns( ).size( ); j++ )
+						sourceColumn source = target.getColumns( ).get( j );
+
+						if ( "true".equals( source.getOrphan( ) ) )
+							continue;
+
+						if ( source.getClause( ) != null )
 						{
-							sourceColumn source = target.getColumns( ).get( j );
-
-							if ( "true".equals( source.getOrphan( ) ) )
-								continue;
-
-							if ( source.getClause( ) != null )
+							if ( "select".equalsIgnoreCase( link.getType( ) ) )
 							{
-								if ( "select".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
-								if ( "view".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
-								if ( "insert".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
-								if ( "update".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"assign".equalsIgnoreCase( source.getClause( ) )
-											&& !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
-								if ( "merge".equalsIgnoreCase( link.getType( ) ) )
-								{
-									if ( !"assign".equalsIgnoreCase( source.getClause( ) )
-											&& !"select".equalsIgnoreCase( source.getClause( ) ) )
-										continue;
-								}
+								if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
 							}
-
-							Element relationNode = dlineageRelation.getOwnerDocument( )
-									.createElement( "relation" );
-
-							Element sourceNode = dlineageRelation.getOwnerDocument( )
-									.createElement( "source" );
-
-							if ( source.getTableOwner( ) != null
-									&& !"unknown".equalsIgnoreCase( source.getTableOwner( ) ) )
+							if ( "view".equalsIgnoreCase( link.getType( ) ) )
 							{
-								sourceNode.setAttribute( "table",
-										source.getTableOwner( )
-												+ "."
-												+ source.getTableName( ) );
+								if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
 							}
-							else
+							if ( "insert".equalsIgnoreCase( link.getType( ) ) )
 							{
-								sourceNode.setAttribute( "table",
-										source.getTableName( ) );
+								if ( !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
 							}
-							sourceNode.setAttribute( "column", source.getName( ) );
-							sourceNode.setAttribute( "coordinate",
-									source.getCoordinate( ) );
-
-							Element targetNode = dlineageRelation.getOwnerDocument( )
-									.createElement( "target" );
-
-							if ( link.getTableOwner( ) != null
-									&& !"unknown".equalsIgnoreCase( link.getTableOwner( ) ) )
+							if ( "update".equalsIgnoreCase( link.getType( ) ) )
 							{
-								targetNode.setAttribute( "table",
-										link.getTableOwner( )
-												+ "."
-												+ link.getTableName( ) );
+								if ( !"assign".equalsIgnoreCase( source.getClause( ) )
+										&& !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
 							}
-							else
+							if ( "merge".equalsIgnoreCase( link.getType( ) ) )
 							{
-								targetNode.setAttribute( "table",
-										link.getTableName( ) );
+								if ( !"assign".equalsIgnoreCase( source.getClause( ) )
+										&& !"select".equalsIgnoreCase( source.getClause( ) ) )
+									continue;
 							}
-							targetNode.setAttribute( "column", link.getName( ) );
-
-							if ( target.getAliasCoordinate( ) != null )
-							{
-								targetNode.setAttribute( "coordinate",
-										target.getAliasCoordinate( ) );
-							}
-							else
-							{
-								targetNode.setAttribute( "coordinate",
-										link.getCoordinate( ) );
-							}
-							relationNode.appendChild( sourceNode );
-							relationNode.appendChild( targetNode );
-
-							boolean append = true;
-							for ( int k = 0; k < dlineageRelation.getChildNodes( )
-									.getLength( ); k++ )
-							{
-								if ( dlineageRelation.getChildNodes( )
-										.item( k )
-										.isEqualNode( relationNode ) )
-								{
-									append = false;
-									break;
-								}
-							}
-							if ( append )
-								dlineageRelation.appendChild( relationNode );
 						}
+
+						Element relationNode = dlineageRelation.getOwnerDocument( )
+								.createElement( "relation" );
+
+						Element sourceNode = dlineageRelation.getOwnerDocument( )
+								.createElement( "source" );
+
+						if ( source.getTableOwner( ) != null
+								&& !"unknown".equalsIgnoreCase( source.getTableOwner( ) ) )
+						{
+							sourceNode.setAttribute( "table",
+									source.getTableOwner( )
+											+ "."
+											+ source.getTableName( ) );
+						}
+						else
+						{
+							sourceNode.setAttribute( "table",
+									source.getTableName( ) );
+						}
+						sourceNode.setAttribute( "column", source.getName( ) );
+						sourceNode.setAttribute( "coordinate",
+								source.getCoordinate( ) );
+
+						Element targetNode = dlineageRelation.getOwnerDocument( )
+								.createElement( "target" );
+
+						if ( link.getTableOwner( ) != null
+								&& !"unknown".equalsIgnoreCase( link.getTableOwner( ) ) )
+						{
+							targetNode.setAttribute( "table",
+									link.getTableOwner( )
+											+ "."
+											+ link.getTableName( ) );
+						}
+						else
+						{
+							targetNode.setAttribute( "table",
+									link.getTableName( ) );
+						}
+						targetNode.setAttribute( "column", link.getName( ) );
+
+						if ( target.getAliasCoordinate( ) != null )
+						{
+							targetNode.setAttribute( "coordinate",
+									target.getAliasCoordinate( ) );
+						}
+						else
+						{
+							targetNode.setAttribute( "coordinate",
+									link.getCoordinate( ) );
+						}
+						relationNode.appendChild( sourceNode );
+						relationNode.appendChild( targetNode );
+
+						boolean append = true;
+						for ( int k = 0; k < dlineageRelation.getChildNodes( )
+								.getLength( ); k++ )
+						{
+							if ( dlineageRelation.getChildNodes( )
+									.item( k )
+									.isEqualNode( relationNode ) )
+							{
+								append = false;
+								break;
+							}
+						}
+						if ( append )
+							dlineageRelation.appendChild( relationNode );
 					}
 				}
 			}
@@ -577,11 +570,11 @@ public class DlineageRelation
 	{
 		if ( args.length < 1 )
 		{
-			System.out.println( "Usage: java DlineageRelation [/f <path_to_sql_file>] [/d <path_to_directory_includes_sql_files>] [/t <database type>] [/o <output file path>]" );
+			System.out.println( "Usage: java DlineageRelation [/f <path_to_sql_file>] [/d <path_to_directory_includes_sql_files>] [/t <database type>]" );
 			System.out.println( "/f: Option, specify the sql file path to analyze dlineage relation." );
 			System.out.println( "/d: Option, specify the sql directory path to analyze dlineage relation." );
 			System.out.println( "/t: Option, set the database type. Support oracle, mysql, mssql, db2, netezza, teradata, informix, sybase, postgresql, hive, greenplum and redshift, the default type is oracle" );
-			System.out.println( "/o: Option, write the output stream to the specified file." );
+			System.out.println("/o: Write to a file");
 			return;
 		}
 
@@ -613,6 +606,25 @@ public class DlineageRelation
 		{
 			System.out.println( "Please specify a sql file path or directory path to analyze dlineage." );
 			return;
+		}
+
+		String outputFile = null;
+
+		int s = argList.indexOf("/o");
+
+		if (s != -1 && args.length > s + 1) {
+			outputFile = args[s + 1];
+		}
+
+		FileOutputStream writer = null;
+		if (outputFile != null) {
+			try {
+				writer = new FileOutputStream(outputFile);
+				System.setOut(new PrintStream(writer));
+
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
 		}
 
 		EDbVendor vendor = EDbVendor.dbvoracle;
@@ -671,29 +683,6 @@ public class DlineageRelation
 			}
 		}
 
-		String outputFile = null;
-
-		index = argList.indexOf( "/o" );
-
-		if ( index != -1 && args.length > index + 1 )
-		{
-			outputFile = args[index + 1];
-		}
-
-		FileOutputStream writer = null;
-		if ( outputFile != null )
-		{
-			try
-			{
-				writer = new FileOutputStream( outputFile );
-				System.setOut( new PrintStream( writer ) );
-			}
-			catch ( FileNotFoundException e )
-			{
-				e.printStackTrace( );
-			}
-		}
-
 		DlineageRelation relation = new DlineageRelation( );
 
 		Dlineage dlineage = new Dlineage( sqlFiles, vendor, false, false );
@@ -706,11 +695,7 @@ public class DlineageRelation
 		if ( result != null )
 		{
 			System.out.println( result );
-
-			if ( writer != null )
-			{
-				System.err.println( result );
-			}
+			
 		}
 
 		if ( errorBuffer.length( ) > 0 )
@@ -720,14 +705,11 @@ public class DlineageRelation
 
 		try
 		{
-			if ( writer != null )
-			{
-				writer.close( );
-			}
+			writer.close();
 		}
-		catch ( IOException e )
-		{
-			e.printStackTrace( );
-		}
+		catch(Exception e){}
+		
+
+
 	}
 }
