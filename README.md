@@ -9,4 +9,5 @@ Steps to execute:
 2.To execute it type the class name followed by the arguments which u can give by looking into the program.
 3.The same goes with the dlineage and in there execute the DLineageRelation program.
 
+i have also put in the input query and xml output.
 Now we are left with visualing the data we have extracted out of sql query...:)
