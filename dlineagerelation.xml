@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dlineageRelation>
+  <table name="HRMGR.EMP_HIST">
+    <column name="FNAME"/>
+  </table>
+  <table name="HRMGR.EMP">
+    <column name="DEPTID"/>
+    <column name="ENAME"/>
+    <column name="SAL"/>
+  </table>
+  <table name="HRMGR.DEPT">
+    <column name="NAME"/>
+    <column name="PERCENTAGE"/>
+  </table>
+  <table isView="true" name="HRMGR.V_EMP">
+    <column name="EMPLOYEE_NAME"/>
+    <column name="NAME"/>
+    <column name="BONUS"/>
+  </table>
+  <relation>
+    <source column="FNAME" coordinate="3,14" table="EMP_HIST"/>
+    <target column="EMPLOYEE_NAME" coordinate="4,7" table="V_EMP"/>
+  </relation>
+  <relation>
+    <source column="ENAME" coordinate="3,22" table="EMP"/>
+    <target column="EMPLOYEE_NAME" coordinate="4,7" table="V_EMP"/>
+  </relation>
+  <relation>
+    <source column="NAME" coordinate="4,24" table="DEPT"/>
+    <target column="NAME" coordinate="4,24" table="V_EMP"/>
+  </relation>
+  <relation>
+    <source column="SAL" coordinate="4,33" table="EMP"/>
+    <target column="BONUS" coordinate="4,54" table="V_EMP"/>
+  </relation>
+  <relation>
+    <source column="PERCENTAGE" coordinate="4,39" table="DEPT"/>
+    <target column="BONUS" coordinate="4,54" table="V_EMP"/>
+  </relation>
+</dlineageRelation>
